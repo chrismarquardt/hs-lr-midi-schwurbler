@@ -3,13 +3,21 @@
 #include <Bounce.h> 
 #include <Encoder.h>
 
+
+
+
+
 // Change these pin numbers to the pins connected to your encoder.
 //   Best Performance: both pins have interrupt capability
 //   Good Performance: only the first pin has interrupt capability
 //   Low Performance:  neither pin has interrupt capability
-Encoder knobLeft(2, 3);  //Pins without Interrupt
-Encoder knobRight(7, 8); //Pins with Interrupt
+Encoder knobRight(3, 2);  //Pins without Interrupt
+Encoder knobLeft(8, 7); //Pins with Interrupt
 //   avoid using pins with LEDs attached
+
+
+
+
 
 MIDI_CREATE_DEFAULT_INSTANCE();
 // Dont forget the Interrupts
@@ -19,6 +27,7 @@ const int amountOfPotiControllerInputs = 10;
 const int amountOfDigitalButtonController = 4; 
 const int cable = 0;
 const int ON_VELOCITY = 99;
+
 
 const int potiControllerPin[amountOfPotiControllerInputs] = {A9, A0, A1, A2, A3, A4, A5, A6, A7, A8};
 const int CCID[amountOfPotiControllerInputs] = {21, 22, 23, 24, 25, 26, 27, 28, 29, 30};
@@ -49,8 +58,8 @@ ResponsiveAnalogRead analogPotiController[]{
 Bounce digitalButtonController[] =   {
   Bounce(buttonControllerPin[0], BOUNCE_TIME), 
   Bounce(buttonControllerPin[1], BOUNCE_TIME),
-  Bounce(buttonControllerPin[4], BOUNCE_TIME),
-  Bounce(buttonControllerPin[9], BOUNCE_TIME)
+  Bounce(buttonControllerPin[2], BOUNCE_TIME),
+  Bounce(buttonControllerPin[3], BOUNCE_TIME)
 }; 
 
 
@@ -87,6 +96,7 @@ void getButtonData(){
   for ( int buttonControllerId = 0; buttonControllerId < amountOfDigitalButtonController; buttonControllerId++ ) {
     digitalButtonController[buttonControllerId].update();
     if (digitalButtonController[buttonControllerId].fallingEdge()) {
+      Serial.println(buttonControllerId);
       usbMIDI.sendNoteOn(note[buttonControllerId], ON_VELOCITY, midiChannel);  
     }
     // Note Off messages when each button is released
@@ -98,25 +108,34 @@ void getButtonData(){
 
 void getEncoderData(){
   int newLeft, newRight;
-  newLeft = knobLeft.read() / 4;                                                             // The Encoder-Library seems to change the value by 4 with each click 
-  newRight = knobRight.read() / 4;
+  newLeft = map(knobLeft.read(),-255,256,0,127);         // The Encoder-Library seems to change the value by 4 with each click                              
+  newRight = map(knobRight.read(),-255,256,0,127);
   newLeft = constrain(newLeft,0,127);
   newRight = constrain(newRight,0,127);
-  if (newLeft != positionLeft || newRight != positionRight) {
+  if (newLeft != positionLeft) {
+    /*
     Serial.print("Left = ");
     Serial.print(newLeft);
+    Serial.println();
+    */
+    positionLeft = newLeft;
+    usbMIDI.sendControlChange(40, positionLeft, midiChannel);     
+  }  
+  if (newRight != positionRight) {
+    /*
     Serial.print(", Right = ");
     Serial.print(newRight);
     Serial.println();
-    positionLeft = newLeft;
+    */
     positionRight = newRight;
-    usbMIDI.sendControlChange(40, positionLeft, midiChannel);
     usbMIDI.sendControlChange(41, positionRight, midiChannel);
   }
 }
 
 void loop()
 {
+  //if(!digitalRead(4)) Serial.print("4");
+  //if(!digitalRead(9)) Serial.print("9");
   getPotiData();
   getButtonData();   
   getEncoderData();    
