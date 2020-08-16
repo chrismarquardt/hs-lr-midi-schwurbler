@@ -96,7 +96,6 @@ void getButtonData(){
   for ( int buttonControllerId = 0; buttonControllerId < amountOfDigitalButtonController; buttonControllerId++ ) {
     digitalButtonController[buttonControllerId].update();
     if (digitalButtonController[buttonControllerId].fallingEdge()) {
-      Serial.println(buttonControllerId);
       usbMIDI.sendNoteOn(note[buttonControllerId], ON_VELOCITY, midiChannel);  
     }
     // Note Off messages when each button is released
@@ -107,35 +106,40 @@ void getButtonData(){
 }
 
 void getEncoderData(){
-  int newLeft, newRight;
-  newLeft = map(knobLeft.read(),-255,256,0,127);         // The Encoder-Library seems to change the value by 4 with each click                              
-  newRight = map(knobRight.read(),-255,256,0,127);
-  newLeft = constrain(newLeft,0,127);
-  newRight = constrain(newRight,0,127);
-  if (newLeft != positionLeft) {
+  long newLeft, newRight;
+  int dataLeft, dataRight;
+  newLeft = knobLeft.read();                                     
+  newRight = knobRight.read();
+  newLeft = constrain(newLeft,-255,256);
+  newRight = constrain(newRight,-255,256);
+  knobLeft.write(newLeft);
+  knobRight.write(newRight);
+  dataLeft = map(newLeft,-255,256,0,127);          // The Encoder-Library seems to change the value by 4 with each click 
+  dataRight = map(newRight,-255,256,0,127);
+  dataLeft = constrain(dataLeft,0,127);
+  dataRight = constrain(dataRight,0,127);
+  if (dataLeft != positionLeft) {
     /*
     Serial.print("Left = ");
-    Serial.print(newLeft);
+    Serial.print(dataLeft);
     Serial.println();
     */
-    positionLeft = newLeft;
+    positionLeft = dataLeft;
     usbMIDI.sendControlChange(40, positionLeft, midiChannel);     
   }  
-  if (newRight != positionRight) {
+  if (dataRight != positionRight) {
     /*
-    Serial.print(", Right = ");
-    Serial.print(newRight);
+    Serial.print("Right = ");
+    Serial.print(dataRight);
     Serial.println();
     */
-    positionRight = newRight;
+    positionRight = dataRight;
     usbMIDI.sendControlChange(41, positionRight, midiChannel);
   }
 }
 
 void loop()
 {
-  //if(!digitalRead(4)) Serial.print("4");
-  //if(!digitalRead(9)) Serial.print("9");
   getPotiData();
   getButtonData();   
   getEncoderData();    
